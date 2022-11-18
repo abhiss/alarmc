@@ -1,0 +1,1 @@
+deno run --allow-read ./main.ts ./test_script.lox
