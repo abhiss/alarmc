@@ -23,7 +23,6 @@ export class Expression extends Stmt {
     accept(visitor:Visitor<any>): any {
         return visitor.visitExpressionStmt(this);
     }
-
 }
 export class Print extends Stmt {
     readonly expression:Expr;

@@ -80,8 +80,6 @@ function example() {
 		),
 	);
 	// console.log(JSON.stringify(expression));
-	const printer = new AstPrinter();
+	const printer = new  RPMAstPrinter();
 	console.log(printer.print(expression));
 }
-
-example()

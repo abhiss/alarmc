@@ -5,6 +5,7 @@ import { TokenType } from './token_type.ts';
 import { AstPrinter } from './AstPrinter.ts';
 import { RuntimeError } from './runtime_error.ts';
 import { Interpreter } from "./interpreter.ts";
+import { CodeGen } from './codegen.ts';
 
 let hadError = false;
 let hadRuntimeError = false;
@@ -12,41 +13,46 @@ const interpreter = new Interpreter();
 main(Deno.args);
 
 function main(args: string[]) {
-	if (args.length > 1) {
-		console.log('Usage: tslox [script]');
-	} else if (args.length == 1) {
-		runFile(args[0]);
+	if (args.length == 2) {
+		runFile(args[0], args[1]);
 	} else {
-		runPrompt();
+		// runPrompt();
+		console.log('Usage: tslox [script]');
 	}
 }
 
-function runFile(path: string) {
+function runFile(path: string, out_path:string) {
 	const file = Deno.readTextFileSync(path);
-	run(file);
+	let asm = run(file);
+	if(asm == null) throw Error("An error occured :(")
+	Deno.writeTextFileSync(out_path, asm);
+
 	if(hadError) Deno.exit(65);
 	if(hadRuntimeError) Deno.exit(70);
 }
 
-function runPrompt() {
-	for (;;) {
-		const line = prompt('>');
-		if (line == null) break;
-		run(line);
-		hadError = false;
-	}
-}
-
-function run(source: string) {
+//returns the generated assembly code
+function run(source: string): string|null {
 	const scanner = new Scanner(source);
 	const tokens: Token[] = scanner.scanTokens();
 
 	const parser = new Parser(tokens);
 	const statements = parser.parse();
-	if (hadError) return;
-	if (statements) { //book doesn't handle null like this.
-		interpreter.interpret(statements);
-	} else console.log('invalid expression.');
+	
+	if (hadError) return null;
+	const codegen = new CodeGen();
+	let total_gen = ''
+	for(let i in statements){
+		const s = statements[i]
+		total_gen +=`\n; statement: ${i}\n`;
+		total_gen += s?.accept(codegen);
+	}
+	let asm = `mov r0 1\nmov r6 0\n${total_gen}\nhalt\n`;
+
+	return asm;
+	// if (statements) { //book doesn't handle null like this.
+	// 	// interpreter.interpret(statements);
+	// } else console.log('invalid expression.');
 }
 
 function report(line: number, where: string, message: string) {

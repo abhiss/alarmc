@@ -1,0 +1,6 @@
+// deno-lint-ignore-file
+var identifier = 1+1; //expected: 0x2
+var id2 = 1 * identifier + 3; //expected: 0x5
+var third_var = id2 / identifier + 13; //expected: 0xf
+var fourth_var = third_var * 16; //expected: 0xf0
+var fifth_var = third_var * 16 * 16; //expected: 0xf00

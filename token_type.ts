@@ -46,4 +46,5 @@ export enum TokenType {
 	WHILE,
 
 	EOF,
+	SENTINEL
 }
