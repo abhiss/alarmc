@@ -8,11 +8,25 @@ export abstract class Stmt {
 }
 
 export interface Visitor<R> {
+    visitBlockStmt(stmt:Block): R;
     visitExpressionStmt(stmt:Expression): R;
     visitPrintStmt(stmt:Print): R;
+    visitIfStmt(stmt:If): R;
     visitVarStmt(stmt:Var): R;
 }
 
+export class Block extends Stmt {
+    readonly statements:Array<Stmt>;
+    constructor(statements:Array<Stmt>) {
+        super();
+        this.statements = statements;
+    }
+
+    accept(visitor:Visitor<any>): any {
+        return visitor.visitBlockStmt(this);
+    }
+
+}
 export class Expression extends Stmt {
     readonly expression:Expr;
     constructor(expression:Expr) {
@@ -23,6 +37,7 @@ export class Expression extends Stmt {
     accept(visitor:Visitor<any>): any {
         return visitor.visitExpressionStmt(this);
     }
+
 }
 export class Print extends Stmt {
     readonly expression:Expr;
@@ -33,6 +48,22 @@ export class Print extends Stmt {
 
     accept(visitor:Visitor<any>): any {
         return visitor.visitPrintStmt(this);
+    }
+
+}
+export class If extends Stmt {
+    readonly condition:Expr;
+    readonly thenBranch:Stmt;
+    readonly elseBranch:Stmt|null;
+    constructor(condition:Expr, thenBranch:Stmt, elseBranch:Stmt|null) {
+        super();
+        this.condition = condition;
+        this.thenBranch = thenBranch;
+        this.elseBranch = elseBranch;
+    }
+
+    accept(visitor:Visitor<any>): any {
+        return visitor.visitIfStmt(this);
     }
 
 }

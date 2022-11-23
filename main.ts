@@ -49,7 +49,8 @@ function run(source: string): string|null {
 	}
 	let asm = `mov r0 1\nmov r6 0\n${total_gen}\nhalt\n`;
 
-	return asm;
+	return asm.split('\n').map(e=>e.trimStart()).join('\n') //remove leading whitespace (tabs and stuff) 
+	
 	// if (statements) { //book doesn't handle null like this.
 	// 	// interpreter.interpret(statements);
 	// } else console.log('invalid expression.');

@@ -5,6 +5,9 @@ r6 is stack pointer. Only changed for push/pop stack operations.
 r5-r3 are free so far.
 r2-r1 are used to move data from stack/RAM into register to operate on them.
 r0 should always = 1. A generator can use it temporarily but must restore it to 1. Used to inc/decrement r6 (stack pointer)
+
+Logical and - false if r1 * r2 == 0, because one of them must've been zero
+logical or - false if r1 + r2 == 0, because none of them are > 0.
 */
 
 import {
@@ -17,10 +20,10 @@ import {
     Variable,
     Visitor as ExprVisitor,
 } from './expr.ts';
-import { Expression, Var, Visitor as StmtVisitor } from './Stmt.ts';
+import { Block, Expression, If, Stmt, Var, Visitor as StmtVisitor } from './Stmt.ts';
 import { Token } from './token.ts';
 import { TokenType as TT } from './token_type.ts';
-import { CodegenEnvironment } from './codegen_variables.ts';
+import { CodegenEnvironment, LabelEnv } from './codegen_variables.ts';
 
 const reset_r0 = 'mov r0 1\n';
 const R = {
@@ -36,8 +39,18 @@ const R = {
 
 export class CodeGen implements ExprVisitor<unknown>, StmtVisitor<void> {
     variables = new CodegenEnvironment();
+    labels = new LabelEnv();
     private evaluate(expr: Expr): string {
         return expr.accept(this);
+    }
+    private generate(stmt: Stmt): string {
+        return stmt.accept(this);
+    }
+    visitBlockStmt(stmt: Block): string {
+        //generate all statements in list
+        return stmt.statements.reduce( (acc: string, curr: Stmt): string => {
+            return acc + curr.accept(this);
+        }, '; block statement: \n');
     }
 
     visitExpressionStmt(stmt: Expression): string {
@@ -49,11 +62,47 @@ export class CodeGen implements ExprVisitor<unknown>, StmtVisitor<void> {
         //assume evaluate generates code that puts data "value" on stack.
         let asm = '';
         asm += this.evaluate(stmt.initializer);
-        asm += this.pop(R[0]);
-        asm += this.variables.gen_define_variable(stmt.name.lexeme, R[0]);
+        asm += this.pop(R[1]);
+        asm += this.variables.gen_define_variable(stmt.name.lexeme, R[1]);
         asm += reset_r0;
         return asm;
     }
+
+    visitAssignExpr(expr: Assign): unknown {
+        return `
+        ${this.evaluate(expr.value)}
+        ${this.pop(R[1])} ; popped assignment value into r1
+        ${this.variables.gen_assign_variable_to_reg(expr.name.lexeme, R[1])} ; assigned r1 to variable ${expr.name.lexeme}
+        `
+    }
+
+    visitIfStmt(stmt: If): string {
+        //if top of stack if 0, go to else stmt, otherwise go to then stmt
+        const else_ = this.labels.new_label('else');
+        const finally_ = this.labels.new_label('finally');
+
+        const then_stmt = this.generate(stmt.thenBranch);
+        const else_stmt = (stmt.elseBranch) ? this.generate(stmt.elseBranch) : '';
+        return `
+            ${this.evaluate(stmt.condition)}
+            ${this.pop(R[1])} ; popped result of condition into r1
+            
+            ; branch based on r1
+            mul r1 r1 r0
+
+            beq ${else_}
+            ; then statement
+            ${then_stmt}
+            b ${finally_}
+
+            ${else_}: ;
+            ; eles statement
+            ${else_stmt}
+
+            ${finally_}:
+        `;
+    }
+
     visitVariableExpr(expr: Variable): string {
         //push data from value onto stack
         let asm = `;pushing variable ${expr.name.lexeme} to stack`;
@@ -87,10 +136,15 @@ export class CodeGen implements ExprVisitor<unknown>, StmtVisitor<void> {
                 return 'sub';
             case TT.SLASH:
                 return 'div';
+            case TT.EQUAL_EQUAL:
+                // case TT.BANG_EQUAL:
+                //these are treated specially in calling function
+                return null;
             default:
                 throw Error('Invalid operator. Only + * - / are supported.');
         }
     }
+
     private parenthesize(operator: Token | undefined, ...exprs: Expr[]): string {
         let builder = '';
         for (const expr of exprs) {
@@ -101,33 +155,64 @@ export class CodeGen implements ExprVisitor<unknown>, StmtVisitor<void> {
             return builder;
         }
         const instr = this.get_instr(operator.type);
-        const asm = [];
-        asm.push(this.pop(R[2]));
-        asm.push(this.pop(R[1]));
-        asm.push('; operation add on r1 and r2');
-        asm.push(`${instr} r1 r1 r2`);
-        asm.push('str r1 [r6]');
-        asm.push('add r6 r6 r0');
-        builder += asm.join('\n');
+        if (instr !== null) {
+            const asm = [];
+            asm.push(this.pop(R[2]));
+            asm.push(this.pop(R[1]));
+            asm.push('; operation add on r1 and r2');
+            asm.push(`${instr} r1 r1 r2`);
+            asm.push('str r1 [r6]');
+            asm.push('add r6 r6 r0');
+            builder += asm.join('\n');
+        } else if (operator.type == TT.EQUAL_EQUAL) { //comparison operators
+            const not_equal_label = this.labels.new_label('not_equal');
+            builder += `
+                ; comparison: r[1] == r[2]. Push 0 if not equal
+                ${this.pop(R[2])}
+                ${this.pop(R[1])}
+                cmp r1 r2 ; equality operation
+                mov r3 0
+                bne ${not_equal_label}
+                mov r3 1 ; this only runs if comparison was equal
+                ${not_equal_label}:
+                ${this.push_reg(R[3])}
+            `;
+        } else if (operator.type == TT.AND) {
+            //not implemented in parser
+            const not_and = this.labels.new_label('not_and');
+
+            builder += `; logical AND
+                ${this.pop(R[2])}
+                ${this.pop(R[1])}
+                mul r1 r1 r2
+                mov r3 0
+                bne ${not_and}
+                mov r3 1
+                ${not_and}
+                ${this.push_reg(R[3])}
+            `;
+        } else {
+            throw new Error('operator not implemented.');
+        }
         // builder += operator.lexeme;
         return builder;
     }
 
     private push_reg(reg: string): string {
-        let asm =`
+        let asm = `
 ; pushing value of reg ${reg} to stack
 str ${reg} [r6]
 add r6 r6 r0 ; increment stack pointer
-`
+`;
         return asm;
     }
     private push_value(num: number): string {
-        let asm =`
+        let asm = `
 ; pushing ${num} to stack
 mov r3 ${num}
 str r3 [r6]
 add r6 r6 r0 ; increment stack pointer
-`
+`;
         return asm;
     }
     private pop(reg: string): string {
@@ -157,7 +242,7 @@ function example() {
     );
     // console.log(JSON.stringify(expression));
     const gen = new CodeGen();
-    console.log(gen.print(expression));
+    // console.log(gen.evaluate(expression));
 }
 
 // example();
