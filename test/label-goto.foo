@@ -1,0 +1,9 @@
+var i = 0;
+var k = 0;
+
+label:loop;
+if(3-i){
+    i = i + 1;
+    k = k + 2;
+    goto loop;
+}

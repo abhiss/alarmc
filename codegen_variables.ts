@@ -68,8 +68,8 @@ export class LabelEnv {
      * @param name name that describes the label, inserted into genered asm.
      * @returns unique label name that can be used directly in assembly.
      */
-    public new_label(name: string): string {
-        const label = `label_${name}_${+this.counter++}`;
+    public new_gen_label(name: string): string {
+        const label = `__gen_label_${name}_${+this.counter++}`;
         return label;
     }
 }

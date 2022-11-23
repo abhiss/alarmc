@@ -10,7 +10,8 @@ export abstract class Stmt {
 export interface Visitor<R> {
     visitBlockStmt(stmt:Block): R;
     visitExpressionStmt(stmt:Expression): R;
-    visitPrintStmt(stmt:Print): R;
+    visitGotoStmt(stmt:Goto): R;
+    visitLabelStmt(stmt:Label): R;
     visitIfStmt(stmt:If): R;
     visitVarStmt(stmt:Var): R;
 }
@@ -39,15 +40,27 @@ export class Expression extends Stmt {
     }
 
 }
-export class Print extends Stmt {
-    readonly expression:Expr;
-    constructor(expression:Expr) {
+export class Goto extends Stmt {
+    readonly label:Token;
+    constructor(label:Token) {
         super();
-        this.expression = expression;
+        this.label = label;
     }
 
     accept(visitor:Visitor<any>): any {
-        return visitor.visitPrintStmt(this);
+        return visitor.visitGotoStmt(this);
+    }
+
+}
+export class Label extends Stmt {
+    readonly label:Token;
+    constructor(label:Token) {
+        super();
+        this.label = label;
+    }
+
+    accept(visitor:Visitor<any>): any {
+        return visitor.visitLabelStmt(this);
     }
 
 }

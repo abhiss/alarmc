@@ -9,6 +9,7 @@ export enum TokenType {
 	MINUS,
 	PLUS,
 	SEMICOLON,
+	COLON,
 	SLASH,
 	STAR,
 
@@ -38,6 +39,7 @@ export enum TokenType {
 	NIL,
 	OR,
 	GOTO,
+	LABEL,
 	RETURN,
 	SUPER,
 	THIS,

@@ -20,6 +20,7 @@ export default class Scanner {
 		['nil', TT.NIL],
 		['or', TT.OR],
 		['goto', TT.GOTO],
+		['label', TT.LABEL],
 		['return', TT.RETURN],
 		['super', TT.SUPER],
 		['this', TT.THIS],
@@ -81,6 +82,10 @@ export default class Scanner {
 
 			case ';':
 				this.addToken(TT.SEMICOLON);
+				break;
+
+			case ':':
+				this.addToken(TT.COLON);
 				break;
 
 			case '*':

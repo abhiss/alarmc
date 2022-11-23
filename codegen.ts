@@ -20,7 +20,7 @@ import {
     Variable,
     Visitor as ExprVisitor,
 } from './expr.ts';
-import { Block, Expression, If, Stmt, Var, Visitor as StmtVisitor } from './Stmt.ts';
+import { Block, Expression, Goto, If, Label, Stmt, Var, Visitor as StmtVisitor } from './Stmt.ts';
 import { Token } from './token.ts';
 import { TokenType as TT } from './token_type.ts';
 import { CodegenEnvironment, LabelEnv } from './codegen_variables.ts';
@@ -40,6 +40,8 @@ const R = {
 export class CodeGen implements ExprVisitor<unknown>, StmtVisitor<void> {
     variables = new CodegenEnvironment();
     labels = new LabelEnv();
+    user_provided_labels: string[] = [];
+
     private evaluate(expr: Expr): string {
         return expr.accept(this);
     }
@@ -57,6 +59,20 @@ export class CodeGen implements ExprVisitor<unknown>, StmtVisitor<void> {
         return this.evaluate(stmt.expression);
     }
 
+    visitLabelStmt(stmt: Label): string {
+        if (this.user_provided_labels.includes(stmt.label.lexeme)) {
+            throw new Error(`Label ${stmt.label.lexeme} already defined.`);
+        }
+        return `
+            ${stmt.label.lexeme}: ; set user provided label
+        `;
+    }
+
+    visitGotoStmt(stmt: Goto): string {
+        return `
+            b ${stmt.label.lexeme} ; branch to user provided label
+        `;
+    }
     //variable definition
     visitVarStmt(stmt: Var): string {
         //assume evaluate generates code that puts data "value" on stack.
@@ -72,14 +88,16 @@ export class CodeGen implements ExprVisitor<unknown>, StmtVisitor<void> {
         return `
         ${this.evaluate(expr.value)}
         ${this.pop(R[1])} ; popped assignment value into r1
-        ${this.variables.gen_assign_variable_to_reg(expr.name.lexeme, R[1])} ; assigned r1 to variable ${expr.name.lexeme}
-        `
+        ; assigning r1 to variable ${expr.name.lexeme}
+        ${this.variables.gen_assign_variable_to_reg(expr.name.lexeme, R[1])} 
+
+        `;
     }
 
     visitIfStmt(stmt: If): string {
         //if top of stack if 0, go to else stmt, otherwise go to then stmt
-        const else_ = this.labels.new_label('else');
-        const finally_ = this.labels.new_label('finally');
+        const else_ = this.labels.new_gen_label('else');
+        const finally_ = this.labels.new_gen_label('finally');
 
         const then_stmt = this.generate(stmt.thenBranch);
         const else_stmt = (stmt.elseBranch) ? this.generate(stmt.elseBranch) : '';
@@ -159,13 +177,13 @@ export class CodeGen implements ExprVisitor<unknown>, StmtVisitor<void> {
             const asm = [];
             asm.push(this.pop(R[2]));
             asm.push(this.pop(R[1]));
-            asm.push('; operation add on r1 and r2');
+            asm.push('; operation ' + instr + ' on r1 and r2');
             asm.push(`${instr} r1 r1 r2`);
             asm.push('str r1 [r6]');
             asm.push('add r6 r6 r0');
             builder += asm.join('\n');
         } else if (operator.type == TT.EQUAL_EQUAL) { //comparison operators
-            const not_equal_label = this.labels.new_label('not_equal');
+            const not_equal_label = this.labels.new_gen_label('not_equal');
             builder += `
                 ; comparison: r[1] == r[2]. Push 0 if not equal
                 ${this.pop(R[2])}
@@ -179,7 +197,7 @@ export class CodeGen implements ExprVisitor<unknown>, StmtVisitor<void> {
             `;
         } else if (operator.type == TT.AND) {
             //not implemented in parser
-            const not_and = this.labels.new_label('not_and');
+            const not_and = this.labels.new_gen_label('not_and');
 
             builder += `; logical AND
                 ${this.pop(R[2])}

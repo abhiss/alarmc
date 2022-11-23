@@ -38,7 +38,7 @@ function run(source: string): string|null {
 
 	const parser = new Parser(tokens);
 	const statements = parser.parse();
-	
+	// console.log(JSON.stringify(statements, null, 4))
 	if (hadError) return null;
 	const codegen = new CodeGen();
 	let total_gen = ''

@@ -1,6 +1,11 @@
-var i = 0;
-if(i+1-1*15) {
-    i = 15;
-} else {
-    i = 64;
+var i = 5;
+var k = 0;
+var j = 0;
+if(i){
+    if(k){
+        j = 5;
+    }
+    else j = 10;
 }
+
+//expect j = 0xa

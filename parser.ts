@@ -2,7 +2,7 @@ import { TokenType, TokenType as TT } from './token_type.ts';
 import { Token } from './token.ts';
 import { Assign, Binary, Expr, Grouping, Literal, Unary, Variable } from './expr.ts';
 import { LoxError } from './main.ts';
-import { Block, Expression, If, Print, Stmt, Var, Visitor as StmtVisitor } from './Stmt.ts';
+import { Block, Expression, Goto, If, Label, Stmt, Var, Visitor as StmtVisitor } from './Stmt.ts';
 //a recursive descent parser
 // Each method for parsing a grammar rule produces a syntax tree for that
 // rule and returns it to the caller. When the body of rule contains nonterminal,
@@ -30,6 +30,7 @@ export class Parser {
         //vars, functtions, classes
         try {
             if (this.match(TT.VAR)) return this.varDecl();
+            if (this.match(TT.LABEL)) return this.label();
             return this.statement();
         } catch (error) {
             if (error instanceof ParseError) {
@@ -48,10 +49,19 @@ export class Parser {
         this.consume(TT.SEMICOLON, 'Expect \';\' after variable declaration');
         return new Var(name, initializer);
     }
+
+    //label -> LABEL ':' IDENTIFIER
+    private label(): Stmt {
+        this.consume(TT.COLON, 'Expect : after label.');
+        const name = this.consume(TT.IDENTIFIER, 'Expect variable name.');
+        this.consume(TT.SEMICOLON, 'expect ; after label statement.');
+        return new Label(name);
+    }
+
     //statement -> ifStmt|printStmt|blockStmt|expressionStmt ;
     private statement(): Stmt {
         if (this.match(TT.IF)) return this.ifStatement();
-        if (this.match(TT.GOTO)) return this.printStatement();
+        if (this.match(TT.GOTO)) return this.gotoStatement();
         if (this.match(TT.LEFT_BRACE)) return new Block(this.blockStatement());
         return this.expressionStatement();
     }
@@ -75,15 +85,15 @@ export class Parser {
             statements.push(this.statement());
         }
         this.consume(TT.RIGHT_BRACE, 'expect \'}\' to close block statement.');
-		return statements;
+        return statements;
     }
 
     //printStmt -> "print" expression ;
-    private printStatement(): Stmt {
-        if(!this.match(TT.IDENTIFIER)) throw new Error('Label not found after "goto".');
-        const value = new Variable(this.previous());
+    private gotoStatement(): Stmt {
+        if (!this.match(TT.IDENTIFIER)) throw new Error('Label not found after "goto".');
+        const value = new Goto(this.previous());
         this.consume(TT.SEMICOLON, 'Expect \';\' after label in goto statement.');
-        return new Print(value);
+        return value;
     }
     private expressionStatement(): Stmt {
         const expr = this.expression();
@@ -97,7 +107,6 @@ export class Parser {
     //assignment -> IDENTIFIER "=" assignment | equality;
     private assignment(): Expr {
         const expr = this.equality();
-
         if (this.match(TT.EQUAL)) {
             const equals = this.previous();
             const value = this.assignment();

@@ -16,7 +16,8 @@ defineAst(output_dir, 'Expr', [
 defineAst(output_dir, 'Stmt', [	
 	'Block		: Array<Stmt> statements',
     'Expression : Expr expression',
-    'Print      : Expr expression',
+    'Goto      	: Token label',
+	'Label		: Token label',
     'If 		: Expr condition, Stmt thenBranch, Stmt|null elseBranch',
     'Var		: Token name, Expr initializer',
 ]);
