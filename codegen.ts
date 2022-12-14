@@ -26,6 +26,7 @@ import {
     Goto,
     If,
     Label,
+    Print,
     Stmt,
     Var,
     Visitor as StmtVisitor,
@@ -48,7 +49,7 @@ const R = {
     7: 'r7',
 };
 
-export class CodeGen implements ExprVisitor<unknown>, StmtVisitor<void> {
+export class CodeGen implements ExprVisitor<unknown>, StmtVisitor<string> {
     variables = new CodegenEnvironment();
     labels = new LabelEnv();
     user_provided_labels: string[] = [];
@@ -59,7 +60,7 @@ export class CodeGen implements ExprVisitor<unknown>, StmtVisitor<void> {
     private generate(stmt: Stmt): string {
         return stmt.accept(this);
     }
-    visitWhileStmt(stmt: While): void {
+    visitWhileStmt(stmt: While): string {
         throw new Error(
             'Encountered While statment in codegen. While statements should be lowered before codegen.',
         );
@@ -110,6 +111,14 @@ export class CodeGen implements ExprVisitor<unknown>, StmtVisitor<void> {
         `;
     }
 
+    visitPrintStmt(stmt: Print): string {
+        return `;print statement
+            ${this.evaluate(stmt.value)}
+            ${this.pop(R[1])}
+            mov r2 -1
+            str r1 [r2]
+        `;
+    }
     visitIfStmt(stmt: If): string {
         //if top of stack if 0, go to else stmt, otherwise go to then stmt
         const else_ = this.labels.new_gen_label('else');

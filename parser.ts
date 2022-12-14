@@ -2,7 +2,7 @@ import { TokenType, TokenType as TT } from './token_type.ts';
 import { Token } from './token.ts';
 import { Assign, Binary, Expr, Grouping, Literal, Unary, Variable } from './expr.ts';
 import { LoxError } from './main.ts';
-import { Block, Expression, Goto, If, Label, Stmt, Var, While} from './Stmt.ts';
+import { Block, Expression, Goto, If, Label, Print, Stmt, Var, While} from './Stmt.ts';
 //a recursive descent parser
 // Each method for parsing a grammar rule produces a syntax tree for that
 // rule and returns it to the caller. When the body of rule contains nonterminal,
@@ -60,11 +60,22 @@ export class Parser {
 
     //statement -> ifStmt|printStmt|blockStmt|expressionStmt ;
     private statement(): Stmt {
+        if(this.match(TT.PRINT)) return this.printStatement();
         if (this.match(TT.IF)) return this.ifStatement();
         if(this.match(TT.WHILE)) return this.whileStatement();
         if (this.match(TT.GOTO)) return this.gotoStatement();
         if (this.match(TT.LEFT_BRACE)) return new Block(this.blockStatement());
         return this.expressionStatement();
+    }
+
+    private printStatement(): Stmt {
+        console.log(this.tokens);
+        this.consume(TT.LEFT_PAREN, 'Expect ( after print');
+        console.log(this.tokens[this.current])
+        const value = this.expression();
+        this.consume(TT.RIGHT_PAREN, 'Expect ) after print');
+        this.consume(TT.SEMICOLON, 'Expect ; after print');
+        return new Print(value);
     }
 
     // ifStmt -> 'if' '(' condition ')' then_stmt ('else' else_stmt)?

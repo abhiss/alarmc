@@ -1,15 +1,17 @@
 import { TokenType, TokenType as TT } from './token_type.ts';
 import { Token } from './token.ts';
-import { Block, Expression, Goto, If, Label, Stmt, Var, Visitor, While } from './Stmt.ts';
+import { Block, Expression, Goto, If, Label, Print, Stmt, Var, Visitor, While } from './Stmt.ts';
 import { LabelEnv } from './codegen_variables.ts';
 
-export class LoweringVisitor implements Visitor<void> {
+export class LoweringVisitor implements Visitor<Stmt> {
     label_env = new LabelEnv();
 
     public lower(stmts: Stmt[]): Stmt[] {
         return stmts.map((e) => e.accept(this));
     }
-
+    visitPrintStmt(stmt: Print): Stmt {
+        return stmt;
+    }
     visitIfStmt(stmt: If) {
         stmt.thenBranch.accept(this);
         if (stmt.elseBranch) {

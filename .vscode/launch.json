@@ -7,14 +7,16 @@
 		{
 			"request": "launch",
 			"name": "Launch Program",
-			"type": "pwa-node",
-			"program": "${workspaceFolder}/AstPrinter.ts",
+			"type": "node",
 			"cwd": "${workspaceFolder}",
-			"runtimeExecutable": "C:\\Users\\wd_a_sohal\\.deno\\bin\\deno.EXE",
+			"runtimeExecutable": "deno.exe",
 			"runtimeArgs": [
 				"run",
-				"--inspect",
-				"--allow-all"
+				"--inspect-brk",
+				"--allow-all",
+				"./main.ts",
+				"./examples/file.foo",
+				"./examples/test.s",
 			],
 			"attachSimplePort": 9229
 		}

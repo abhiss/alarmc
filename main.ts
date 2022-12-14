@@ -42,12 +42,12 @@ function run(source: string): string | null {
 	const lowerer = new LoweringVisitor();
 
     const unlowered_statements = parser.parse();
+    if (hadError) return null; //means parser errored
     // console.log(JSON.stringify(statements, null, 4))
     console.log(Deno.inspect(unlowered_statements, { depth: 10, colors: true }));
 
 	const statements = lowerer.lower(unlowered_statements as Stmt[]);
 
-    if (hadError) return null;
     const codegen = new CodeGen();
     let total_gen = '';
     for (let i in statements) {

@@ -27,6 +27,7 @@ export default class Scanner {
 		['true', TT.TRUE],
 		['var', TT.VAR],
 		['while', TT.WHILE],
+		['print', TT.PRINT],
 	]);
 
 	constructor(source: string) {

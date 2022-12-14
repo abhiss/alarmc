@@ -46,6 +46,7 @@ export enum TokenType {
 	TRUE,
 	VAR,
 	WHILE,
+	PRINT,
 
 	EOF,
 	SENTINEL
