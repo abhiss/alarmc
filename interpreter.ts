@@ -3,7 +3,7 @@ import { Token } from "./token.ts";
 import { TokenType as TT } from "./token_type.ts";
 import { RuntimeError } from "./runtime_error.ts";
 import { LoxRuntimeError } from "./main.ts";
-import { Expression, Print, Stmt, Var, Visitor as StmtVisitor } from "./Stmt.ts";
+import { Block, Expression, Goto, If, Label, Stmt, Var, Visitor as StmtVisitor, While } from "./Stmt.ts";
 import { Environment } from "./environment.ts";
 
 export class Interpreter implements ExprVisitor<unknown>, StmtVisitor<void>{
@@ -113,10 +113,10 @@ export class Interpreter implements ExprVisitor<unknown>, StmtVisitor<void>{
     visitExpressionStmt(stmt: Expression):void{
         this.evaluate(stmt.expression);
     }
-    visitPrintStmt(stmt: Print): void {
-        const value = this.evaluate(stmt.expression);
-        console.log(value);
-    }
+    // visitPrintStmt(stmt: Print): void {
+    //     const value = this.evaluate(stmt.expression);
+    //     console.log(value);
+    // }
     visitVarStmt(stmt: Var): void {
         let value = this.evaluate(stmt.initializer);
         this.environment.define(stmt.name.lexeme, value);
@@ -132,4 +132,20 @@ export class Interpreter implements ExprVisitor<unknown>, StmtVisitor<void>{
     private execute(stmt:Stmt){
         stmt.accept(this);
     }    
+
+    visitBlockStmt(stmt: Block): void {
+        throw new Error('Statment not supported in interpreter')
+    }
+    visitGotoStmt(stmt: Goto): void {
+        throw new Error('Statment not supported in interpreter')
+    }
+    visitIfStmt(stmt: If): void {
+        throw new Error('Statment not supported in interpreter')
+    }
+    visitLabelStmt(stmt: Label): void {
+        throw new Error('Statment not supported in interpreter')
+    }
+    visitWhileStmt(stmt: While): void {
+        throw new Error('Statment not supported in interpreter')
+    }
 }

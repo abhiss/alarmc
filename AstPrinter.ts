@@ -1,4 +1,4 @@
-import { Binary, Expr, Grouping, Literal, Unary, Visitor } from './expr.ts';
+import { Assign, Binary, Expr, Grouping, Literal, Unary, Variable, Visitor } from './expr.ts';
 import { Token } from './token.ts';
 import { TokenType } from './token_type.ts';
 
@@ -19,6 +19,12 @@ export class AstPrinter implements Visitor<any> {
 	visitUnaryExpr(expr: Unary) {
 		return this.parenthesize(expr.operator.lexeme, expr.right);
 	}
+	visitAssignExpr(expr: Assign) {
+		return '';
+	}
+	visitVariableExpr(expr: Variable) {
+		return expr.name.lexeme;
+	}
 
 	private parenthesize(name: string, ...exprs: Expr[]): string {
 		let builder = '(' + name;
@@ -34,6 +40,12 @@ export class AstPrinter implements Visitor<any> {
 export class RPMAstPrinter implements Visitor<any> {
 	print(expr: Expr) {
 		return expr.accept(this);
+	}
+	visitAssignExpr(expr: Assign) {
+		return '';
+	}
+	visitVariableExpr(expr: Variable) {
+		return expr.name.lexeme;
 	}
 	visitBinaryExpr(expr: Binary) {
 		return this.parenthesize(expr.operator.lexeme, expr.left, expr.right);

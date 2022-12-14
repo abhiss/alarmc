@@ -20,6 +20,7 @@ defineAst(output_dir, 'Stmt', [
 	'Label		: Token label',
     'If 		: Expr condition, Stmt thenBranch, Stmt|null elseBranch',
     'Var		: Token name, Expr initializer',
+    'While      : Expr condition, Stmt block'
 ]);
 
 function defineAst(output_dir: string, base_name: string, types: string[]) {

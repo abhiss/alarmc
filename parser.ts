@@ -2,7 +2,7 @@ import { TokenType, TokenType as TT } from './token_type.ts';
 import { Token } from './token.ts';
 import { Assign, Binary, Expr, Grouping, Literal, Unary, Variable } from './expr.ts';
 import { LoxError } from './main.ts';
-import { Block, Expression, Goto, If, Label, Stmt, Var, Visitor as StmtVisitor } from './Stmt.ts';
+import { Block, Expression, Goto, If, Label, Stmt, Var, While} from './Stmt.ts';
 //a recursive descent parser
 // Each method for parsing a grammar rule produces a syntax tree for that
 // rule and returns it to the caller. When the body of rule contains nonterminal,
@@ -61,6 +61,7 @@ export class Parser {
     //statement -> ifStmt|printStmt|blockStmt|expressionStmt ;
     private statement(): Stmt {
         if (this.match(TT.IF)) return this.ifStatement();
+        if(this.match(TT.WHILE)) return this.whileStatement();
         if (this.match(TT.GOTO)) return this.gotoStatement();
         if (this.match(TT.LEFT_BRACE)) return new Block(this.blockStatement());
         return this.expressionStatement();
@@ -79,6 +80,14 @@ export class Parser {
         return new If(condition_expr, then_branch, else_branch);
     }
 
+    //while statement -> 'while' '(' condition ')' then_stmt
+    private whileStatement(): Stmt {
+        this.consume(TT.LEFT_PAREN, 'expect \'(\' after "while"');
+        const condition_expr = this.expression();
+        this.consume(TT.RIGHT_PAREN, 'expect \')\' after conditional expression for while stmt.');
+        const then_stmt = this.statement();
+        return new While(condition_expr, then_stmt);
+    }
     private blockStatement(): Stmt[] {
         const statements: Stmt[] = [];
         while (!this.check(TT.RIGHT_BRACE)) {
@@ -106,7 +115,7 @@ export class Parser {
     }
     //assignment -> IDENTIFIER "=" assignment | equality;
     private assignment(): Expr {
-        const expr = this.equality();
+        const expr = this.andor();
         if (this.match(TT.EQUAL)) {
             const equals = this.previous();
             const value = this.assignment();
@@ -119,6 +128,18 @@ export class Parser {
         }
         return expr;
     }
+
+    //andor -> equality (( "and" | "or" ) eqality)*;
+    private andor(): Expr{
+        let expr = this.equality();
+        while(this.match(TT.AND, TT.OR)){
+            const operator = this.previous();
+            const right = this.equality();
+            expr = new Binary(expr,operator, right);
+        }
+        return expr;
+    }
+
     //equality       → comparison ( ( "!=" | "==" ) comparison )* ;
     private equality(): Expr {
         let expr: Expr = this.comparison();

@@ -3,6 +3,7 @@ import { LoxRuntimeError } from './main.ts';
 import { RuntimeError } from './runtime_error.ts';
 import { Token } from './token.ts';
 const reset_r0 = 'mov r0 1\n';
+
 export class CodegenEnvironment {
     readonly variable_to_addres = new Map<string, number>();
     readonly BASE_ADDR = 0x90;
@@ -30,6 +31,10 @@ export class CodegenEnvironment {
 
     gen_assign_variable_to_reg(name: string, reg: string): string {
         if (reg == 'r0') throw new Error('reg r0 used internally.');
+        if (!this.variable_to_addres.has(name)) {
+            console.log(this.variable_to_addres)
+            throw new Error(`Address for variable ${name} not created`);
+        }
         const address = this.variable_to_addres.get(name);
         return `
 			; assign variable ${name} to value in ${reg} at address ${address}

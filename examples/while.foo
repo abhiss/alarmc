@@ -1,0 +1,8 @@
+var k = 5;
+var j = 10;
+while(k){
+    k = k - 1;
+    j = j + 1;
+}
+j;
+//expect stack = 0xF

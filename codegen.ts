@@ -20,10 +20,21 @@ import {
     Variable,
     Visitor as ExprVisitor,
 } from './expr.ts';
-import { Block, Expression, Goto, If, Label, Stmt, Var, Visitor as StmtVisitor } from './Stmt.ts';
+import {
+    Block,
+    Expression,
+    Goto,
+    If,
+    Label,
+    Stmt,
+    Var,
+    Visitor as StmtVisitor,
+    While,
+} from './Stmt.ts';
 import { Token } from './token.ts';
 import { TokenType as TT } from './token_type.ts';
 import { CodegenEnvironment, LabelEnv } from './codegen_variables.ts';
+import { RuntimeError } from './runtime_error.ts';
 
 const reset_r0 = 'mov r0 1\n';
 const R = {
@@ -48,9 +59,14 @@ export class CodeGen implements ExprVisitor<unknown>, StmtVisitor<void> {
     private generate(stmt: Stmt): string {
         return stmt.accept(this);
     }
+    visitWhileStmt(stmt: While): void {
+        throw new Error(
+            'Encountered While statment in codegen. While statements should be lowered before codegen.',
+        );
+    }
     visitBlockStmt(stmt: Block): string {
         //generate all statements in list
-        return stmt.statements.reduce( (acc: string, curr: Stmt): string => {
+        return stmt.statements.reduce((acc: string, curr: Stmt): string => {
             return acc + curr.accept(this);
         }, '; block statement: \n');
     }
@@ -155,7 +171,10 @@ export class CodeGen implements ExprVisitor<unknown>, StmtVisitor<void> {
             case TT.SLASH:
                 return 'div';
             case TT.EQUAL_EQUAL:
-                // case TT.BANG_EQUAL:
+            case TT.BANG:
+            case TT.OR:
+            case TT.AND:
+            case TT.LESS:
                 //these are treated specially in calling function
                 return null;
             default:
@@ -195,6 +214,18 @@ export class CodeGen implements ExprVisitor<unknown>, StmtVisitor<void> {
                 ${not_equal_label}:
                 ${this.push_reg(R[3])}
             `;
+        } else if (operator.type == TT.BANG) {
+            const not_equal_label = this.labels.new_gen_label('not_equal');
+            builder += `
+                ; negation: !r[1]
+                ${this.pop(R[1])}
+                cmp r1 r2 ; equality operation
+                mov r3 0
+                bne ${not_equal_label}
+                mov r3 1 ; this only runs if comparison was equal
+                ${not_equal_label}:
+                ${this.push_reg(R[3])}
+            `;
         } else if (operator.type == TT.AND) {
             //not implemented in parser
             const not_and = this.labels.new_gen_label('not_and');
@@ -202,13 +233,30 @@ export class CodeGen implements ExprVisitor<unknown>, StmtVisitor<void> {
             builder += `; logical AND
                 ${this.pop(R[2])}
                 ${this.pop(R[1])}
-                mul r1 r1 r2
+                mul r1 r1 r2 ; 1 if left and right of and are non-zero
                 mov r3 0
-                bne ${not_and}
+                beq ${not_and}
                 mov r3 1
-                ${not_and}
+                ${not_and}:
                 ${this.push_reg(R[3])}
             `;
+        } else if (operator.type == TT.LESS) {
+            //not implemented in parser
+            const not_lessthan = this.labels.new_gen_label('not_lessthan');
+
+            builder += `; < operator
+                ${this.pop(R[2])}
+                ${this.pop(R[1])}
+                cmp r1 r2
+                mov r1 flags
+                mov r2 2 ; make carry flag mask
+                and r1 r1 r2 ; move carry flag to r1
+                mov r3 0
+                beq ${not_lessthan}
+                mov r3 1
+                ${not_lessthan}:
+                ${this.push_reg(R[3])}
+             `;
         } else {
             throw new Error('operator not implemented.');
         }
@@ -218,19 +266,19 @@ export class CodeGen implements ExprVisitor<unknown>, StmtVisitor<void> {
 
     private push_reg(reg: string): string {
         let asm = `
-; pushing value of reg ${reg} to stack
-str ${reg} [r6]
-add r6 r6 r0 ; increment stack pointer
-`;
+            ; pushing value of reg ${reg} to stack
+            str ${reg} [r6]
+            add r6 r6 r0 ; increment stack pointer
+            `;
         return asm;
     }
     private push_value(num: number): string {
         let asm = `
-; pushing ${num} to stack
-mov r3 ${num}
-str r3 [r6]
-add r6 r6 r0 ; increment stack pointer
-`;
+            ; pushing ${num} to stack
+            mov r3 ${num}
+            str r3 [r6]
+            add r6 r6 r0 ; increment stack pointer
+            `;
         return asm;
     }
     private pop(reg: string): string {
@@ -258,7 +306,6 @@ function example() {
             new Literal(4),
         ),
     );
-    // console.log(JSON.stringify(expression));
     const gen = new CodeGen();
     // console.log(gen.evaluate(expression));
 }

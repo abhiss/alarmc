@@ -1,0 +1,7 @@
+var k = 0;
+var j = 0;
+while(k<5){
+    k = k + 1;
+    j = j + 1;
+}
+j;

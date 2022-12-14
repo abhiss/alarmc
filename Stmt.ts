@@ -14,6 +14,7 @@ export interface Visitor<R> {
     visitLabelStmt(stmt:Label): R;
     visitIfStmt(stmt:If): R;
     visitVarStmt(stmt:Var): R;
+    visitWhileStmt(stmt:While): R;
 }
 
 export class Block extends Stmt {
@@ -91,6 +92,20 @@ export class Var extends Stmt {
 
     accept(visitor:Visitor<any>): any {
         return visitor.visitVarStmt(this);
+    }
+
+}
+export class While extends Stmt {
+    readonly condition:Expr;
+    readonly block:Stmt;
+    constructor(condition:Expr, block:Stmt) {
+        super();
+        this.condition = condition;
+        this.block = block;
+    }
+
+    accept(visitor:Visitor<any>): any {
+        return visitor.visitWhileStmt(this);
     }
 
 }
